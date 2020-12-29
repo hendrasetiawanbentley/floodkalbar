@@ -286,30 +286,7 @@ def update_hist(name,kabupaten):
 @app.callback(dash.dependencies.Output('memory-output', 'data'),
               dash.dependencies.Input('3tahunanlokasi', 'value'))
 def filter_countries(filterlocation):
-    if not filterlocation:
-        # Return all the rows on initial load/no country selected.
-        dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
-        dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
-        #create selection for the dataset
-        #untuk histogram feed to the graph
-        #jumlah banjir bulanan kalimantan barat
-        #untuk menampilkan tabel
-        tigathn = dfbnbp['Tanggal Kejadian'].groupby(dfbnbp['Tanggal Kejadian'].dt.to_period("M")).agg('count')
-        tigathn = pd.DataFrame(tigathn)
-        tigathn.columns = ['Jumlah Total Kejadian']
-        tigathn['Bulan Kejadian'] = tigathn.index
-        tigathn['Bulan Kejadian'] =tigathn['Bulan Kejadian'].apply(str)
-        tigathn['Bulan Kejadian'] =pd.to_datetime(tigathn['Bulan Kejadian'], format="%Y-%m")
-        tigathn['year'] = pd.DatetimeIndex(tigathn['Bulan Kejadian']).year
-        tigathn['year']=tigathn['year'].astype(str)
-        tigathn['month'] = pd.to_datetime(tigathn['Bulan Kejadian']).dt.strftime('%b')
-        #tigathn['Bulan kejadian']=tigathn.index
-        tigathn=tigathn.groupby(['month']).sum()
-        readytgntahun=pd.DataFrame(tigathn)
-        readytgntahun['bulan kejadian']=readytgntahun.index
-        readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
-        readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
-        return readytgntahun.to_dict('records')
+   
 
     #create selection for the dataset
     #untuk histogram feed to the graph
