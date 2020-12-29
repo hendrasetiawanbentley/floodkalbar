@@ -340,6 +340,7 @@ def filter_countries(filterlocation):
 def on_data_set_table(data):
     if data is None:
         raise PreventUpdate
+    return data
 
 
 if __name__ == '__main__':
