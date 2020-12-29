@@ -6,7 +6,7 @@ import plotly.express as px
 import pandas as pd
 import dash_daq as daq
 import dash_table
-from dash.exceptions import PreventUpdate
+
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
