@@ -117,6 +117,7 @@ app.layout = html.Div([
                                                     {'label': 'SEKADAU', 'value':'SEKADAU'},
                                                     {'label': 'SINTANG', 'value':'SINTANG'},],
                            id='3tahunanlokasi',
+                           multi=False,
                            value='all'),
                           dash_table.DataTable(
                               id='memory-table',
