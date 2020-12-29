@@ -1,324 +1,435 @@
+
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-import pandas as pd
 import plotly.express as px
+import pandas as pd
+import dash_daq as daq
+import dash_table
+from dash.exceptions import PreventUpdate
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
 server = app.server
 
-top_markdown_text = '''
-This is my first deployed app
-'''
 
-df = pd.read_csv('dashboardready1.csv')
-df = df.loc[df["Country Name"]!= "Equatorial Guinea"]
-df = df.loc[df["Country Name"]!= "Argentina"]
-df = df.loc[df["Country Name"]!= "Brazil"]
-df = df.loc[df["Country Name"]!= "Bulgaria"]
-df = df.loc[df["Country Name"]!= "Zimbabwe"]
-df = df.loc[df["Country Name"]!= "Angola"]
-df = df.loc[df["Country Name"]!= "Belarus"]
-df = df.loc[df["Country Name"]!= "Tajikistan"]
-df = df.loc[df["Country Name"]!= "Bahamas, The"]
-df = df.loc[df["Country Name"]!= "Mongolia"]
-df = df.loc[df["Country Name"]!= "Armenia"]
-df = df.loc[df["Country Name"]!= "Uruguay"]
-df = df.loc[df["Country Name"]!= "Romania"]
-df = df.loc[df["Country Name"]!= "Bolivia"]
-df = df.loc[df["Country Name"]!= "Trinidad and Tobago"]
-df = df.loc[df["Country Name"]!= "Azerbaijan"]
-df = df.loc[df["Country Name"]!= "Ukraine"]
-df = df.loc[df["Country Name"]!= 'Kyrgyz Republic']
-df = df.loc[df["Country Name"]!= 'Malawi']
-df = df.loc[df["Country Name"]!= 'Madagascar']
-df = df.loc[df["Country Name"]!= 'Colombia']
-dftimeseries=df.loc[(df['Indicator Name']=='Real interest rate (%)') & (df['Value'].isna())]
-x=dftimeseries["Country Name"]
-available_indicators = df['Indicator Name'].unique()
-dftimeseriesfinal = df[~df["Country Name"].isin(x)]
-available_country=dftimeseriesfinal["Country Name"].unique()
+df = pd.read_csv('cleaneventdata.csv')
+df.created_at = pd.to_datetime(df.created_at)
+df.created_at = df.created_at.dt.date
+banjir_count = df['created_at'].unique()
+freq=len(banjir_count)
+dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
+dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+dfbnbp['Tanggal Kejadian']= dfbnbp['Tanggal Kejadian'].dt.date
+banjir_count_BNPB = dfbnbp['Tanggal Kejadian'].unique()
+freqbnpb=len(banjir_count_BNPB)
+dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+#create selection for the dataset
+#untuk histogram feed to the graph
+#jumlah banjir bulanan kalimantan barat
+#untuk menampilkan tabel
+tigathn = dfbnbp['Tanggal Kejadian'].groupby(dfbnbp['Tanggal Kejadian'].dt.to_period("M")).agg('count')
+tigathn = pd.DataFrame(tigathn)
+tigathn.columns = ['Jumlah Total Kejadian']
+tigathn['Bulan Kejadian'] = tigathn.index
+tigathn['Bulan Kejadian'] =tigathn['Bulan Kejadian'].apply(str)
+tigathn['Bulan Kejadian'] =pd.to_datetime(tigathn['Bulan Kejadian'], format="%Y-%m")
+tigathn['year'] = pd.DatetimeIndex(tigathn['Bulan Kejadian']).year
+tigathn['year']=tigathn['year'].astype(str)
+tigathn['month'] = pd.to_datetime(tigathn['Bulan Kejadian']).dt.strftime('%b')
+#tigathn['Bulan kejadian']=tigathn.index
+tigathn=tigathn.groupby(['month']).sum()
+readytgntahun=pd.DataFrame(tigathn)
+readytgntahun['bulan kejadian']=readytgntahun.index
+readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
+readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
+bulanbanjir = px.bar(readytgntahun,x='bulan kejadian',y='Jumlah Total Kejadian',color="bulan kejadian")
+bulanbanjir.update_xaxes(type='category',tickmode='linear')
 
-import plotly.graph_objects as go 
-dfs = px.data.gapminder().query("year==2007")
-dffromwb = pd.read_csv('dashboardready1.csv')
-dffromwb=dffromwb.rename(columns={"Country Name": "country"})
-dffromwbbaddebt=dffromwb.loc[dffromwb['Indicator Name']=="Bank nonperforming loans to total gross loans (%)"]
-dffromwbbankcredit=dffromwb.loc[dffromwb['Indicator Name']=="Domestic credit to private sector by banks (% of GDP)"]
-dffromwbbaddebt=dffromwbbaddebt.fillna(0)
-dffromwbbankcredit=dffromwbbankcredit.fillna(0)
-dffromwbbaddebt=dffromwbbaddebt.rename(columns={"Value": "Bank nonperforming loans to total gross loans (%)"})
-dffromwbbankcredit=dffromwbbankcredit.rename(columns={"Value": "Domestic credit to private sector by banks (% of GDP)"})
-dfjoin = pd.merge(dfs, dffromwbbaddebt, on=['country'])
-
-import quandl
-# pandas for data manipulation
-import pandas as pd
-from matplotlib import pyplot as plt
-from matplotlib.dates import MonthLocator, DateFormatter
-quandl.ApiConfig.api_key = 'zNSVkNFKh_WNvSTkbvb9'
-# Retrieve Morgan Stanly data from Quandl
-morgan= quandl.get('WIKI/MS')
-# Retrieve the Citigroup data from Quandl
-gm = quandl.get('WIKI/C')
+#data precipitation russia
+precipitation = pd.read_csv('pontianak.csv')
+precipitation['date_time'] = pd.to_datetime(precipitation['date_time'], format="%Y-%m-%d")
+precipitation['month'] = pd.to_datetime(precipitation['date_time']).dt.strftime('%b')
+precipitationbulanan = precipitation.groupby(['month'])['precipMM'].mean()
+precipitationbulanan=pd.DataFrame(precipitationbulanan)
+precipitationbulanan['bulan']=precipitationbulanan.index
+precipitationbulanan=precipitationbulanan[['bulan','precipMM']]
+precipitationbulanan=precipitationbulanan.sort_values(by='precipMM', ascending=False)
+curfig  = px.bar(precipitationbulanan,x='bulan',y='precipMM',color="bulan")
+curfig.update_xaxes(type='category',tickmode='linear')
+curfig.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
 
 
+#https://gis.bnpb.go.id/
 
 app.layout = html.Div([
-    html.Div([
-        html.Div([
-            html.H1('Navigate through Turbulent Economic Period Using Banking Credit as a Fuel for the Economy', style={'textAlign': 'center'}),
-            html.H4('(Cross Country and Past Economic Downturn Analysis)', style={'textAlign': 'center'}),
-            ], style={'display': 'inline-block', 'width': '100%'}),
-        html.P('In this pandemic, we should activate all of the resources that we have to get our economy back in a better position as soon as possible. Bank loans are very important tool because we know that, in the Covid19 pandemic, aggregate of demand is taking a hard hit. To fight this shock, Governments tend to lower their interest rate to help the economy. The scatter plot quadrants of real interest rate, Lending Interest rate and GPD annual growth show the movement to a lower level of interest rate during and after the economic downturn', className='my-class', id='my-p-element'),
-    ], style={
-        'borderBottom': 'thin lightgrey solid',
+    html.Div(
+        children=[
+                    html.Div([
+                     html.Div([html.H1('Analisa Efek Banjir dan Mitigasi Resiko Pada Dunia Bisnis Kalimantan Barat', style={'textAlign': 'center','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'})]),
+                             
+                        
+                    html.H2('Dashboard Berdasarkan Data BNPB', style={'textAlign': 'center','borderBottom': 'thin lightgrey solid',
         'backgroundColor': 'rgb(250, 250, 250)',
-        'padding': '10px 5px'
-    }),
-    
-    
-    html.Div([
-        
-        
-
-        html.Div([
-            dcc.Dropdown(
-                id='crossfilter-xaxis-column',
-                options=[{'label': i, 'value': i} for i in available_indicators],
-                value='Real interest rate (%)'
-            ),
-            dcc.RadioItems(
-                id='crossfilter-xaxis-type',
-                options=[{'label': i, 'value': i} for i in ['Linear', 'Log']],
-                value='Linear',
-                labelStyle={'display': 'inline-block'}
-            )
-        ],
-        style={'width': '49%', 'display': 'inline-block'}),
-
-        html.Div([
-            dcc.Dropdown(
-                id='crossfilter-yaxis-column',
-                options=[{'label': 'GDP growth (annual %)', 'value': 'GDP growth (annual %)'}],
-                value='GDP growth (annual %)'
-            ),
-            dcc.RadioItems(
-                id='crossfilter-yaxis-type',
-                options=[{'label': i, 'value': i} for i in ['Linear', 'Log']],
-                value='Linear',
-                labelStyle={'display': 'inline-block'}
-            )
-        ], style={'width': '49%', 'float': 'right', 'display': 'inline-block'})
-    ], style={
-        'borderBottom': 'thin lightgrey solid',
-        'backgroundColor': 'rgb(250, 250, 250)',
-        'padding': '10px 5px'
-    }),
-
-    html.Div([
-        dcc.Graph(
-            id='crossfilter-indicator-scatter',
-            hoverData={'points': [{'customdata': 'Indonesia'}]}
-        )
-    ], style={'width': '49%', 'display': 'inline-block', 'padding': '0 20'}),
-   
-    html.Div([ html.H4(' ') ], style={'display': 'inline-block', 'width': '2%'}),
-    
-    html.Div([
-         html.H3('Real Interest Rate and GDP Annual Growth Scatter Plot Interpretation'),
-         html.P('From this scatter plot in 1997, we know that most of the countries were hovering between 0% to 10% annual GDP growth and between 0% to 10% real interest rate.', className='v', id='v'),
-         html.P('If you change the slider to 1998, the graph showed that many countries fell down to lower annual GDP growth. This means that countries with high annual GDP growth a year before experienced a downward pressure.', className='c', id='c'),
-         html.P('In 1999 (year after economic downturn), we can notice that there is an increase in the number of countries with low real interest rate. This can be a sign that governments try to increase bank lending by lowering their interest rates.', className='f', id='f'),
-         html.P('Similar trend is happening with Lending Interest Rates and in 2007 - 2008 Period', className='g', id='g'),
-         html.Br(),
-         html.Br(),
-         html.Br(),
-         ], style={'display': 'inline-block', 'width': '30%'}),
-    
-     html.Div(dcc.Slider(
-        id='crossfilter-year--slider',
-        min=df['Year'].min(),
-        max=df['Year'].max(),
-        value=df['Year'].max(),
-        marks={str(year): str(year) for year in df['Year'].unique()},
-        step=None
-    ), style={'width': '49%', 'padding': '0px 20px 20px 20px'}),
-     
-     
-    
-    html.Div([
-        
-        html.Div([
-            html.H4('Investigation to Individual Country Real Interest Rates and Lending Interest Rates Time Series Graph'),
-            html.P('To give a solid evidence that countries in the world were trying to lower the rates as an effort to increase bank lending in the turbulent times, We can see from the time series variable below, that almost everytime GDP Annual Growth decline, lending interest rate and real interest rate is decline mostly in the year of crisis and one year after (Crisis Period 1997-1999 and 2007-2009. For most Asian Region, This is happening in 1997 - 1999 period and for most European, North America,South America and Mediterania Region, This trend happening in 2007 and 2009 period )')
-        
-        ], style={
-        'borderBottom': 'thin lightgrey solid',
-        'backgroundColor': 'rgb(250, 250, 250)',
-        'padding': '10px 5px'
-        }),
-        html.Div([
-             dcc.Dropdown(
-                id='countryselection',
-                options=[{'label': i, 'value': i} for i in available_country],
-                value='Indonesia'
-            ),
-            dcc.Dropdown(options=[{'label': 'Real Interest Rates', 'value': 'Real interest rate (%)'},
-                                        {'label': 'Lending Interest Rates', 'value': 'Lending interest rate (%)'}],
-                               id='vartimeseriesx',
-                               value='Real interest rate (%)'),
+        'padding': '10px 5px'}),
+                    ]),
+                    
+                    html.Div([
+                    html.Div([
+                        html.H5("Grafik Total Kejadian Banjir Berdasarkan Tahun: "),
+                                 dcc.Dropdown(options=[{'label': '2017', 'value':'2017'},
+                                                    {'label': '2018', 'value':'2018'},
+                                                    {'label': '2019', 'value':'2019'},
+                                                    {'label': '2020', 'value':'2020'},
+                                    ],
+                        id='tahun-multidropdown',
+                           multi=True,
+                           value=['2017','2018','2019','2020']),
+                        html.H5("Grafik Total Kejadian Banjir Berdasarkan Kabupaten: "),   
+                            dcc.Dropdown(options=[{'label': 'BENGKAYANG', 'value':'BENGKAYANG'},
+                                                    {'label': 'KAPUAS HULU', 'value':'KAPUAS HULU'},
+                                                    {'label': 'KAYONG UTARA', 'value':'KAYONG UTARA'},
+                                                    {'label': 'KETAPANG', 'value':'KETAPANG'},
+                                                    {'label': 'KOTA SINGKAWANG', 'value':'KOTA SINGKAWANG'},
+                                                    {'label': 'KUBU RAYA', 'value':'KUBU RAYA'},
+                                                    {'label': 'LANDAK', 'value':'LANDAK'},
+                                                    {'label': 'MELAWI', 'value':'MELAWI'},
+                                                    {'label': 'MEMPAWAH', 'value':'MEMPAWAH'},
+                                                    {'label': 'SAMBAS', 'value':'SAMBAS'},
+                                                    {'label': 'SANGGAU', 'value':'SANGGAU'},
+                                                    {'label': 'SEKADAU', 'value':'SEKADAU'},
+                                                    {'label': 'SINTANG', 'value':'SINTANG'},
+                                    ],
+                        id='kabupaten-multidropdown',
+                           multi=True,
+                           value=['BENGKAYANG','KAPUAS HULU','KAYONG UTARA','KETAPANG','KOTA SINGKAWANG','KUBU RAYA','LANDAK','MELAWI','MEMPAWAH','SAMBAS','SANGGAU','SEKADAU','SINTANG']),
+                         html.H5("Grafik Total Kejadian Banjir", style={'textAlign': 'center'}),
+                            dcc.Graph(id='eventhistogram')],
+                        style={'width': '70%', 'display': 'inline-block','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'}),
+                      html.Div([
+                          html.P("Tabel Bulanan Total Kejadian Periode 2017 - 2020"),
+                          dcc.Dropdown(options=[{'label': 'Seluruh Kalimantan Barat', 'value':''},
+                                                {'label': 'BENGKAYANG', 'value':'BENGKAYANG'},
+                                                    {'label': 'KAPUAS HULU', 'value':'KAPUAS HULU'},
+                                                    {'label': 'KAYONG UTARA', 'value':'KAYONG UTARA'},
+                                                    {'label': 'KETAPANG', 'value':'KETAPANG'},
+                                                    {'label': 'KOTA SINGKAWANG', 'value':'KOTA SINGKAWANG'},
+                                                    {'label': 'KUBU RAYA', 'value':'KUBU RAYA'},
+                                                    {'label': 'LANDAK', 'value':'LANDAK'},
+                                                    {'label': 'MELAWI', 'value':'MELAWI'},
+                                                    {'label': 'MEMPAWAH', 'value':'MEMPAWAH'},
+                                                    {'label': 'SAMBAS', 'value':'SAMBAS'},
+                                                    {'label': 'SANGGAU', 'value':'SANGGAU'},
+                                                    {'label': 'SEKADAU', 'value':'SEKADAU'},
+                                                    {'label': 'SINTANG', 'value':'SINTANG'},],
+                           id='3tahunanlokasi',
+                           value=''),
+                          dash_table.DataTable(
+                              id='memory-table',
+                              columns=[{'name': i, 'id': i} for i in readytgntahun.columns],
+                              data=readytgntahun.to_dict('records')
+                              ),
+                          
+                          
+                          ],style={'width': '28%', 'display': 'inline-block','float': 'right','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'})
             
-            ], style={'display': 'inline-block', 'width': '100%'}),
+                  ],
+              style={'width': '100%', 'display': 'inline-block', 'float': 'right'}),
+            html.Div([
+                html.Div([
+                    html.H5("Data Weather Station Average Precipitation/Curah Hujan periode 2015 - 2020 "),
+                    dcc.Graph(figure=curfig),
+                    html.P("Terjadi pergeseran seasonal tiap tahun", style={'textAlign': 'center'}),
+                    
+                    ],style={'width': '50%', 'display': 'inline-block'}),
+                html.Div([
+                    html.H5("Data Bulanan Banjir Periode 2017 - 2020"),
+                    dcc.Dropdown(options=[{'label': 'Seluruh Kalimantan Barat', 'value':''},
+                                                {'label': 'BENGKAYANG', 'value':'BENGKAYANG'},
+                                                    {'label': 'KAPUAS HULU', 'value':'KAPUAS HULU'},
+                                                    {'label': 'KAYONG UTARA', 'value':'KAYONG UTARA'},
+                                                    {'label': 'KETAPANG', 'value':'KETAPANG'},
+                                                    {'label': 'KOTA SINGKAWANG', 'value':'KOTA SINGKAWANG'},
+                                                    {'label': 'KUBU RAYA', 'value':'KUBU RAYA'},
+                                                    {'label': 'LANDAK', 'value':'LANDAK'},
+                                                    {'label': 'MELAWI', 'value':'MELAWI'},
+                                                    {'label': 'MEMPAWAH', 'value':'MEMPAWAH'},
+                                                    {'label': 'SAMBAS', 'value':'SAMBAS'},
+                                                    {'label': 'SANGGAU', 'value':'SANGGAU'},
+                                                    {'label': 'SEKADAU', 'value':'SEKADAU'},
+                                                    {'label': 'SINTANG', 'value':'SINTANG'},],
+                           id='3tahunanlokasigraph',
+                           value=''),
+                    dcc.Graph(id='graptotalperbandingan'),
+                    html.P("Ketinggian permukaan pasang mempengaruhi event banjir", style={'textAlign': 'center'})
+                    
+                    
+                    
+                    ],style={'width': '50%', 'display': 'inline-block'}),
+                ],style={'width': '100%', 'display': 'inline-block', 'float': 'right','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'}),
+             html.Div(
+                        children=[
+                            dcc.Store(id='memory-output'),
+                           
+  
+                            html.Div([
+                            html.P("Kejadian Banjir di Kalimantan Barat Data Twitter Periode Februari 2017, 15 - Desember 2020, 6",style={'width': '45%'}),
+                            daq.LEDDisplay(
+                                id="tweet-led",
+                                value=freq,
+                                color="#92e0d3",
+                                backgroundColor="#1e2130",
+                                )],style={'width': '50%', 'display': 'inline-block', 'padding': '0 20','align':'center'}),
+                            
+                            
+                            html.Div([
+                            html.P("Kejadian Banjir di Kalimantan Barat Data BNPB Periode Februari 2017, 15 - Desember 2020, 6",style={'width': '45%'}),
+                            daq.LEDDisplay(
+                                id="bnpb-led",
+                                value=freqbnpb,
+                                color="#92e0d3",
+                                backgroundColor="#1e2130"
+                                )],style={'width': '50%', 'display': 'inline-block', 'padding': '0 20'})
+                            
+                            
+                        ],style={'width': '100%' ,'display': 'inline-block','border':'3px solid #fff'}
+                        
+                        
+                        
+                        ),
+            html.Div([
+                html.H3("Interpretasi Data Pada Dunia Bisnis", style={'textAlign': 'center','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'}),
+                html.P(" Dunia usaha di Kalimantan Barat dipastikan akan mengalami kerugian di saat terjadi banjir, namun signifikasi dampak tersebut akan berbeda untuk tiap sektor. Sektor Retail, Pertanian, Konstruksi dan Perbankan akan terdampak cukup signifikan dikarenakan model bisnis yang terhubung dengan konektifitas transportasi dan keadaan cuaca.", style={'textAlign': 'left','borderBottom': 'thin lightgrey solid'}),
+                html.Div([
+                html.Div([
+                html.H6("Sektor Retail", style={'textAlign': 'center','borderBottom': 'thin lightgrey solid'}),
+                html.P(" - Menurut Bappenas pemberian likuiditas kepada UKM yang terdampak banjir untuk memulai lagi dan mempertahankan operasional bisnis sangat penting. Selain itu penerapan manajemen resiko yang baik akan dapat mengurangi magnitude dampak kerugian bisnis. Pengusaha dan Pihak terkait yang dapat menyediakan likuiditas tambahan dapat melakukan persiapan dengan mengalokasikan liquiditas cadangan pada bulan yang memiliki resiko banjir tinggi di Kalimantan Barat.", style={'textAlign': 'left'}),
+                html.P(" - Sebagai contoh dalam 3 tahun terakhir, Bulan November, Januari, Juli, September, dan Desember kejadian banjir di Provinsi Kalimantan Barat cukup tinggi. Oleh karena itu,  UKM dan Perusahaan yang bergerak di sektor retail dapat mempersiapkan cadangan likuiditas  pada bulan - bulan berisiko banjir tersebut untuk menjaga cashflow dan operasional perusahaan", style={'textAlign': 'left'}),
+                ],style={'width': '48%', 'display': 'inline-block', 'float':'left','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'}),
+                html.Div([
+                html.H6("Sektor Konstruksi dan Proyek Pemerintah", style={'textAlign': 'center','borderBottom': 'thin lightgrey solid'}),
+                html.P(" - Untuk sektor konstruksi, berdasarkan penelitian Findy Kamaruzzaman, Penyebab terlambat nya pengerjaan penyelesaian proyek konstruksi adalah kenaikan harga bahan peringkat 2, kelangkaan material peringkat 3, dan pengaruh cuaca pada pengerjaan peringkat 4.", style={'textAlign': 'left'}),
+                html.P(" - Namun untuk untuk disadari, Banjir dan Curah hujan yang tinggi memiliki hubungan causal yang dapat menyebabkan kenaikan bahan baku, kelangkaan material dan menghambat day to day operation dari pengerjaan konstruksi.", style={'textAlign': 'left'}),
+                html.P(" - Dalam rangka memitigasi resiko - resiko tersebut, Kontraktor dan Pemilik Pekerjaan dapat memperhitungkan analisa curah hujan dan kemungkinan banjir pada pengerjaan proyek yang melewati bulan dengan curah hujan tinggi sebagai contoh dalam 3 tahun terakhir (Februari, Januari dan Maret) dan (November, Januari, Juli, September, dan Desember).", style={'textAlign': 'left'}),
+                html.P(" - Intensitas Curah hujan akan bergeser dan dipengaruhi cuaca. Apabila terjadi pergeseran, Persiapan terhadap kemungkinan curah hujan tinggi  tidak akan menjadi cost yang terbuang sia - sia karna dapat dimanfaatkan pada saat terjadi pergeseran", style={'textAlign': 'left'}),
+                html.P(" - Sebagai contoh, Pemesanan dan Pengiriman bahan dapat dilaksanakan secara massive sebelum bulan berisiko curah hujan tinggi, untuk menghidari kelangkaan, kesulitan pengirimanan dan penyimpanan dan kenaikan harga", style={'textAlign': 'left'}),
+                html.P(" - Perancangan dan pelaksanaan pekerjaan  proyek harus dapat memperhitungkan bulan - bulan dengan resiko curah hujan dan banjir yang tinggi. Pemantauan ketinggian pasang air juga menjadi faktor yang dipantau dikarenakan banjir juga dipengaruhi oleh hal tersebut", style={'textAlign': 'left'}),
+                html.P(" - Penerapan Asuransi, pemantauan Lebih Sering pada Bulan berisiko, quality control, hedging bahan baku, dan perancangan metode addendum pada saat risk event terjadi adalah hal - hal yang harus dilakukan agar dapat melakukan pengerjaan proyek yang optimal", style={'textAlign': 'left'}),
+                ],style={'width': '48%', 'display': 'inline-block', 'float': 'right','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'}),
+                ],style={'width': '100%', 'display': 'inline-block', 'float': 'right'}),
+                html.Div([
+                html.Div([
+                html.H6("Sektor Pertanian", style={'textAlign': 'center','borderBottom': 'thin lightgrey solid'}),
+                html.P(" - Secara umum sektor pertanian memiliki exposure resiko serupa dengan sektor kontruksi dan proyek pemerintah. Siklus tanam dan panen harus memperhitungkan resiko banjir dan curah hujan yang tinggi", style={'textAlign': 'left'}),
+                html.P(" - Asuransi usaha tani yang digagas oleh industri jasa keuangan dan didukung pemerintah dapat menjadi alat dalam melakukan mitigasi resiko", style={'textAlign': 'left'}),
+                html.P(" - Berdasarkan UNDANG-UNDANG REPUBLIK INDONESIA NOMOR 19 TAHUN 2013 TENTANG PERLINDUNGAN DAN PEMBERDAYAAN PETANI, Asuransi Pertanian adalah perjanjian antara Petani dan pihak perusahaan asuransi untuk mengikatkan diri dalam pertanggungan risiko Usaha Tani   ", style={'textAlign': 'left'}),
+                ],style={'width': '48%', 'display': 'inline-block', 'float': 'left','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'}),
+                html.Div([
+                html.H6("Sektor Perbankan", style={'textAlign': 'center','borderBottom': 'thin lightgrey solid'}),
+                html.P(" - Resiko yang dihadapi perbankan adalah resiko lanjutan yang dihadapi oleh setiap sektor sesuai dengan kredit yang diberikan pada sektor tersebut", style={'textAlign': 'left'}),
+                html.P(" - Untuk debitur sektor retail, Perbankan dapat melakukan analisa pro forma terhadap cashflow debitur untuk menghadapi bulan bulan yang berisiko. Selain itu, untuk beberapa jenis kredit yang memiliki collateral berupa inventory ataupun aset bangunan, Bank dapat melalukan pengecekan, re-evaluasi, dan analisa apakah collateral tersebut akan terdampak curah hujan dan event banjir pada bulan bulan berisiko", style={'textAlign': 'left'}),
+                html.P(" - Untuk debitur sektor konstruksi proyek dan konstruksi pada proyek - proyek pemerintah, Perbankan dapat memasukan resiko curah hujan tinggi dan banjir apabila pengerjaan melewati bulan bulan berisiko. Dikarenakan pekerjaan yang progress nya terhambat dapat mempengaruhi termin pembayaran. Selain itu  resiko tersebut dapat menjadi risk premium yang mempengaruhi struktur harga kredit yang ditawarkan oleh perbankan kepada debitur dan menjadi salah satu unsur covenant dan perjanjian kredit", style={'textAlign': 'left'}),
+                html.P(" - Untuk debitur sektor pertanian, Perbankan dapat melakukan mitigasi resiko untuk memantau apakah debitur telah memperhitungkan siklus curah hujan dan banjir dalam siklus bercocok tanam. Hasil analisa tersebut adalah risk premium dan dapat membuat klausa - klausa khusus yang dapat melindungi debitur dan memastikan kesuksesan kredit yang diberikan", style={'textAlign': 'left'}),
+                ],style={'width': '48%', 'display': 'inline-block', 'float': 'right','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'}),
+                ]),
+                ],style={'width': '100%', 'display': 'inline-block', 'float': 'right'}),
+             html.Div([
+                html.H6("Disclaimer", style={'textAlign': 'center','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'}),
+                html.P("Segala rekomendasi dan analisa hanyalah bersifat memberi pandangan semata, dan Virya Data Scientia tidak bertanggung jawab atas keuntungan atau kerugian yang timbul, kami melarang untuk mengambil keputusan apapun berdasarkan analisa dan rekomendasi pada dashboard ini.", style={'textAlign': 'left','font-size': '8px'}),
+                html.P("Data banjir bersumber dari website BNPB (https://gis.bnpb.go.id/) di akses tanggal 06 Desember 2020", style={'textAlign': 'left','font-size': '8px'}),
+                html.P("Data weather station bersumber dari  https://www.worldweatheronline.com/developer/api/historical-weather-api.aspx di akses tanggal 06 Desember 2020", style={'textAlign': 'left','font-size': '8px'}),
+                html.P("Data Bappenas bersumber dari Laporan Perkiraan Kerusakan dan Kerugian Pasca Bencana Banjir Awal Februari 2007 di Wilayah Jabodetabek ", style={'textAlign': 'left','font-size': '8px'}),
+                html.P("Data Penilitian Proyek bersumber dari Studi Keterlambatan Penyelesaian Proyek Konstruksi oleh Findy Kamaruzzaman", style={'textAlign': 'left','font-size': '8px'}),
+                html.P("Virya Data Scientia tidak menjamin semua informasi yang disajikan akurat dan lengkap sehingga Virya Data Scientia tidak bertanggung jawab atas segala kesalahan dan keterlambatan memperbarui informasi, dan melarang keputusan atau tindakan yang diambil berdasarkan penggunaan informasi yang ada pada dashboard ini", style={'textAlign': 'left','font-size': '8px'}),
+                html.P("Dashboard ini hanya ditujukan untuk kepentingan edukasi dan bukan rekomendasi untuk untuk melakukan aktivitas yang terkait dengan kegiatan apapun.", style={'textAlign': 'left','font-size': '8px'}),
+                 ]) ,
+             html.Div([
+                
+                 ]) 
+                        
+                      
+                        
+                    
+    ])
+  ],style={'background-color:': 'center'})
+        
+@app.callback(
+    dash.dependencies.Output('eventhistogram','figure'),
+    [dash.dependencies.Input('tahun-multidropdown','value'),
+     dash.dependencies.Input('kabupaten-multidropdown','value')]
+    )
+       
+# Update the histogram
+
+def update_hist(name,kabupaten):
+    dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
+    dfbnbp =   dfbnbp [  dfbnbp ['Kabupaten'].isin(kabupaten)]
+    dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+    dfbnbp['Tanggal Kejadian']= dfbnbp['Tanggal Kejadian'].dt.date
+    banjir_count_BNPB = dfbnbp['Tanggal Kejadian'].unique()
+    freqbnpb=len(banjir_count_BNPB)
+    dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+    #create selection for the dataset
+    #untuk histogram feed to the graph
+    freq_kej=dfbnbp['Tanggal Kejadian'].groupby(dfbnbp['Tanggal Kejadian'].dt.to_period("M")).agg('count')
+    freq_kej=pd.DataFrame(freq_kej)
+    freq_kej.columns = ['Jumlah Total Kejadian']
+    freq_kej['Bulan Kejadian'] = freq_kej.index
+    freq_kej['Bulan Kejadian'] =freq_kej['Bulan Kejadian'].apply(str)
+    freq_kej['Bulan Kejadian'] =pd.to_datetime(freq_kej['Bulan Kejadian'], format="%Y-%m")
+    freq_kej['year'] = pd.DatetimeIndex(freq_kej['Bulan Kejadian']).year
+    freq_kej['month'] = pd.to_datetime(freq_kej['Bulan Kejadian']).dt.strftime('%b')
+    freq_kej['year']=freq_kej['year'].astype(str)
+    freq_kej['Bulan Kejadian'] = freq_kej[['year', 'month']].apply(lambda x: '-'.join(x), axis=1)
+    df = freq_kej
+    df =  df [ df ['year'].isin(name)]
+    newfig  = px.bar(df,x='Bulan Kejadian',y='Jumlah Total Kejadian',color="Jumlah Total Kejadian",color_continuous_scale='reds')
+    newfig.update_xaxes(type='category',tickmode='linear')
+    newfig.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
+    return newfig 
+
+@app.callback(dash.dependencies.Output('memory-output', 'data'),
+              dash.dependencies.Input('3tahunanlokasi', 'value'))
+def filter_countries(filterlocation):
+    if not filterlocation:
+        # Return all the rows on initial load/no country selected.
+        dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
+        dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+        #create selection for the dataset
+        #untuk histogram feed to the graph
+        #jumlah banjir bulanan kalimantan barat
+        #untuk menampilkan tabel
+        tigathn = dfbnbp['Tanggal Kejadian'].groupby(dfbnbp['Tanggal Kejadian'].dt.to_period("M")).agg('count')
+        tigathn = pd.DataFrame(tigathn)
+        tigathn.columns = ['Jumlah Total Kejadian']
+        tigathn['Bulan Kejadian'] = tigathn.index
+        tigathn['Bulan Kejadian'] =tigathn['Bulan Kejadian'].apply(str)
+        tigathn['Bulan Kejadian'] =pd.to_datetime(tigathn['Bulan Kejadian'], format="%Y-%m")
+        tigathn['year'] = pd.DatetimeIndex(tigathn['Bulan Kejadian']).year
+        tigathn['year']=tigathn['year'].astype(str)
+        tigathn['month'] = pd.to_datetime(tigathn['Bulan Kejadian']).dt.strftime('%b')
+        #tigathn['Bulan kejadian']=tigathn.index
+        tigathn=tigathn.groupby(['month']).sum()
+        readytgntahun=pd.DataFrame(tigathn)
+        readytgntahun['bulan kejadian']=readytgntahun.index
+        readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
+        readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
+        return readytgntahun.to_dict('records')
+
+    #create selection for the dataset
+    #untuk histogram feed to the graph
+    #jumlah banjir bulanan kalimantan barat
+    #untuk menampilkan tabel
+    dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
+    dfbnbp=dfbnbp.loc[(dfbnbp['Kabupaten']==filterlocation)]
+    dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+    tigathn = dfbnbp['Tanggal Kejadian'].groupby(dfbnbp['Tanggal Kejadian'].dt.to_period("M")).agg('count')
+    tigathn = pd.DataFrame(tigathn)
+    tigathn.columns = ['Jumlah Total Kejadian']
+    tigathn['Bulan Kejadian'] = tigathn.index
+    tigathn['Bulan Kejadian'] =tigathn['Bulan Kejadian'].apply(str)
+    tigathn['Bulan Kejadian'] =pd.to_datetime(tigathn['Bulan Kejadian'], format="%Y-%m")
+    tigathn['year'] = pd.DatetimeIndex(tigathn['Bulan Kejadian']).year
+    tigathn['year']=tigathn['year'].astype(str)
+    tigathn['month'] = pd.to_datetime(tigathn['Bulan Kejadian']).dt.strftime('%b')
+    #tigathn['Bulan kejadian']=tigathn.index
+    tigathn=tigathn.groupby(['month']).sum()
+    readytgntahun=pd.DataFrame(tigathn)
+    readytgntahun['bulan kejadian']=readytgntahun.index
+    readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
+    readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
+    return readytgntahun.to_dict('records')
+
+@app.callback(dash.dependencies.Output('memory-table', 'data'),
+              dash.dependencies.Input('memory-output', 'data'))
+def on_data_set_table(data):
+    if data is None:
+        raise PreventUpdate
+
+    return data
+
+
+
+@app.callback(dash.dependencies.Output('graptotalperbandingan', 'figure'),
+              dash.dependencies.Input('3tahunanlokasigraph', 'value'))
+def filter_countries(filterlocation):
+    if not filterlocation:
+        # Return all the rows on initial load/no country selected.
+        dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
+        dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+        #create selection for the dataset
+        #untuk histogram feed to the graph
+        #jumlah banjir bulanan kalimantan barat
+        #untuk menampilkan tabel
+        tigathn = dfbnbp['Tanggal Kejadian'].groupby(dfbnbp['Tanggal Kejadian'].dt.to_period("M")).agg('count')
+        tigathn = pd.DataFrame(tigathn)
+        tigathn.columns = ['Jumlah Total Kejadian']
+        tigathn['Bulan Kejadian'] = tigathn.index
+        tigathn['Bulan Kejadian'] =tigathn['Bulan Kejadian'].apply(str)
+        tigathn['Bulan Kejadian'] =pd.to_datetime(tigathn['Bulan Kejadian'], format="%Y-%m")
+        tigathn['year'] = pd.DatetimeIndex(tigathn['Bulan Kejadian']).year
+        tigathn['year']=tigathn['year'].astype(str)
+        tigathn['month'] = pd.to_datetime(tigathn['Bulan Kejadian']).dt.strftime('%b')
+        #tigathn['Bulan kejadian']=tigathn.index
+        tigathn=tigathn.groupby(['month']).sum()
+        readytgntahun=pd.DataFrame(tigathn)
+        readytgntahun['bulan kejadian']=readytgntahun.index
+        readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
+        readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
+        bulanbanjir = px.bar(readytgntahun,x='bulan kejadian',y='Jumlah Total Kejadian',color="bulan kejadian")
+        bulanbanjir.update_xaxes(type='category',tickmode='linear')
+        bulanbanjir.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
+        return bulanbanjir
+
+    #create selection for the dataset
+    #untuk histogram feed to the graph
+    #jumlah banjir bulanan kalimantan barat
+    #untuk menampilkan tabel
+    dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
+    dfbnbp=dfbnbp.loc[(dfbnbp['Kabupaten']==filterlocation)]
+    dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+    tigathn = dfbnbp['Tanggal Kejadian'].groupby(dfbnbp['Tanggal Kejadian'].dt.to_period("M")).agg('count')
+    tigathn = pd.DataFrame(tigathn)
+    tigathn.columns = ['Jumlah Total Kejadian']
+    tigathn['Bulan Kejadian'] = tigathn.index
+    tigathn['Bulan Kejadian'] =tigathn['Bulan Kejadian'].apply(str)
+    tigathn['Bulan Kejadian'] =pd.to_datetime(tigathn['Bulan Kejadian'], format="%Y-%m")
+    tigathn['year'] = pd.DatetimeIndex(tigathn['Bulan Kejadian']).year
+    tigathn['year']=tigathn['year'].astype(str)
+    tigathn['month'] = pd.to_datetime(tigathn['Bulan Kejadian']).dt.strftime('%b')
+    #tigathn['Bulan kejadian']=tigathn.index
+    tigathn=tigathn.groupby(['month']).sum()
+    readytgntahun=pd.DataFrame(tigathn)
+    readytgntahun['bulan kejadian']=readytgntahun.index
+    readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
+    readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
+    bulanbanjir = px.bar(readytgntahun,x='bulan kejadian',y='Jumlah Total Kejadian',color="bulan kejadian")
+    bulanbanjir.update_xaxes(type='category',tickmode='linear')
+    bulanbanjir.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
+    return bulanbanjir
+
+"""
+@app.callback(
+    dash.dependencies.Output('output_3tahunan','children'),
+    [dash.dependencies.Input('3tahunanlokasi','value')]
+    )
+def update_3tahunan(lokasi):
+    dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
+    tigathn = dfbnbp['Tanggal Kejadian'].groupby(dfbnbp['Tanggal Kejadian'].dt.to_period("M")).agg('count')
+    tigathn = pd.DataFrame(tigathn)
+    tigathn.columns = ['Jumlah Kejadian']
+    tigathn['Bulan Kejadian'] = tigathn.index
+    tigathn['Bulan Kejadian'] =tigathn['Bulan Kejadian'].apply(str)
+    tigathn['Bulan Kejadian'] =pd.to_datetime(tigathn['Bulan Kejadian'], format="%Y-%m")
+    tigathn['year'] = pd.DatetimeIndex(tigathn['Bulan Kejadian']).year
+    tigathn['year']=tigathn['year'].astype(str)
+    tigathn['month'] = pd.to_datetime(tigathn['Bulan Kejadian']).dt.strftime('%b')
     
-    ]),   
-    html.Div([
-        dcc.Graph(id='x-time-series')
-    ], style={'width': '49%', 'display': 'inline-block'}), 
-    html.Div([
-          dcc.Graph(id='y-time-series')
-         ], style={'display': 'inline-block', 'width': '49%'}),
-
-   
-      html.Div([
-        html.H4('Banking Industry Itself'),
-        html.P('Policy makers also need to maintain the banking industry itself to make sure that economic crisis not bring a financial system catastrophy'),
-        html.P('Bank stock will signal a condition of banking industry. In the economic crisis period 1998 and 2008, We can see the decrease of bank\' stock value')
-    ], style={'width': '100%', 'display': 'inline-block'}),
-      
-      dcc.Dropdown(id='ticker',options=[{'label': 'Morgan Stanley', 'value':1},
-                                     {'label': 'Citigroup', 'value':'gm'}],
-                            value='morgan'),
-      
-      dcc.Graph(id="time-series-chart"),
-      html.P('We can see that the banking stock is taking a hit in two period of crisis 1997 - 1999 and 2007 - 2009. Therefore, Policy maker should keep and eye in the condition of the banking system while using it to help economic recovery. Goverment should focus in controling Bad Debt. I will show you the visualization of Bad Debt in time of crisis'),
-
-
-    html.Div([
-        html.H1('Banking Industry Bad Debt Heatmap', style={'textAlign': 'center'}),
-        dcc.RadioItems(id='mapyear',
-                       options=[
-                           {'label': '2007', 'value': '2007'},
-                           {'label': '2008', 'value': '2008'},
-                           {'label': '2009', 'value': '2009'}
-                           ],
-                       value='2007',
-                       labelStyle={'display': 'inline-block'}),  
-        dcc.Graph(id="heatmap"),
-        html.P('From the heat maps, we notice that bad debt was cool in 2007. Then when the downturn happened in 2008, the heat started to increase, and finally most of the country heat cooled down in 2009. This means that controlling the bad debt is also a part of the game plan when creating counter cyclical policy in an economic downturn.'),
-        html.P('In conclusion, the Dashboard of  GDP growth (annual %), real interest rate (%), lending interest rate (%), and bank non-performing loans to total gross loans (%) shows that, historically, most of the developed country use Banking Credit to fight economic crisis, and This plan can utilize by developing country to fight the COVID19 economic crisis.')
-    ],style={'width': '100%', 'float': 'right', 'display': 'inline-block'})
-
-
-])
-
-@app.callback(
-    dash.dependencies.Output("heatmap", "figure"), 
-    [dash.dependencies.Input("mapyear", "value")])
-
-def display_map(mapyear):
-    
-    dfjoinyearselected=dfjoin.loc[dfjoin['Year']==int(mapyear)]
-
-    fig = px.choropleth(dfjoinyearselected, locations="iso_alpha",
-                    color="Bank nonperforming loans to total gross loans (%)", # lifeExp is a column of gapminder
-                    hover_name="country", # column to add to hover information
-                    color_continuous_scale=px.colors.sequential.OrRd)
-    return fig            
-                 
-            
-@app.callback(
-    dash.dependencies.Output("time-series-chart", "figure"), 
-    [dash.dependencies.Input("ticker", "value")])
-
-def display_time_series(ticker):
-    fig = px.line(morgan, x=morgan.index, y=morgan['Open'])
-    if ticker=="gm":
-        fig = px.line(gm, x=gm.index, y=gm['Open'])
-    return fig
-
-@app.callback(
-    dash.dependencies.Output('crossfilter-indicator-scatter', 'figure'),
-    [dash.dependencies.Input('crossfilter-xaxis-column', 'value'),
-     dash.dependencies.Input('crossfilter-yaxis-column', 'value'),
-     dash.dependencies.Input('crossfilter-xaxis-type', 'value'),
-     dash.dependencies.Input('crossfilter-yaxis-type', 'value'),
-     dash.dependencies.Input('crossfilter-year--slider', 'value')])
-
-def update_graph(xaxis_column_name, yaxis_column_name,
-                 xaxis_type, yaxis_type,
-                 year_value):
-    dff = df[df['Year'] == year_value]
-
-    fig = px.scatter(x=dff[dff['Indicator Name'] == xaxis_column_name]['Value'],
-            y=dff[dff['Indicator Name'] == yaxis_column_name]['Value'],
-            hover_name=dff[dff['Indicator Name'] == yaxis_column_name]['Country Name']
-            )
-
-    fig.update_traces(customdata=dff[dff['Indicator Name'] == yaxis_column_name]['Country Name'])
-
-    fig.update_xaxes(title=xaxis_column_name, type='linear' if xaxis_type == 'Linear' else 'log')
-
-    fig.update_yaxes(title=yaxis_column_name, type='linear' if yaxis_type == 'Linear' else 'log')
-
-    fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest')
-
-    return fig
-
-
-def create_time_series(dff, axis_type, title):
-
-    fig = px.scatter(dff, x='Year', y='Value')
-
-    fig.update_traces(mode='lines+markers')
-
-    fig.update_xaxes(showgrid=False)
-
-    fig.update_yaxes(type='linear' if axis_type == 'Linear' else 'log')
-
-    fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
-                       xref='paper', yref='paper', showarrow=False, align='left',
-                       bgcolor='rgba(255, 255, 255, 0.5)', text=title)
-
-    fig.update_layout(height=225, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
-
-    return fig
-
-
-@app.callback(
-    dash.dependencies.Output('x-time-series', 'figure'),
-    [dash.dependencies.Input('countryselection', 'value'),
-     dash.dependencies.Input('vartimeseriesx', 'value'),
-     dash.dependencies.Input('vartimeseriesx', 'value')
-     ])
-
-def update_x_timeseries(hoverData, yaxis_column_name, axis_type):
-    country_name = hoverData
-    dff = df[df['Country Name'] == country_name]
-    dff = dff[dff['Indicator Name'] == yaxis_column_name]
-    axis_type='Linear'
-    title = '<b>{}</b><br>{}'.format(country_name, yaxis_column_name)
-    return create_time_series(dff, axis_type, title)
-
-
-
-
-@app.callback(
-    dash.dependencies.Output('y-time-series', 'figure'),
-    [dash.dependencies.Input('countryselection', 'value'),
-     dash.dependencies.Input('crossfilter-yaxis-column', 'value')
-     ])
-
-def update_y_timeseries(hoverData, xaxis_column_name):
-    country_name = hoverData
-    dff = df[df['Country Name'] == country_name]
-    dff = dff[dff['Indicator Name'] == 'GDP growth (annual %)']
-    axis_type='Linear'
-    title = '<b>{}</b><br>{}'.format(country_name, xaxis_column_name)
-    return create_time_series(dff, axis_type, title)
+    return 
+    data weather diambil dari
+    https://www.worldweatheronline.com/developer/api/historical-weather-api.aspx
+    Findy Kamaruzzaman
+"""
 
 if __name__ == '__main__':
     app.run_server(debug=True)
