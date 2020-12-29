@@ -284,8 +284,8 @@ def update_hist(name,kabupaten):
     return newfig 
 
 
-@app.callback(dash.dependencies.Output('memory-table', 'data'),
-              dash.dependencies.Input('3tahunanlokasi', 'value'))
+@app.callback(dash.dependencies.Output('graptotalperbandingan', 'figure'),
+              dash.dependencies.Input('3tahunanlokasigraph', 'value'))
 def filter_countries(filterlocation):
     if filterlocation=='all':
         # Return all the rows on initial load/no country selected.
@@ -310,13 +310,15 @@ def filter_countries(filterlocation):
         readytgntahun['bulan kejadian']=readytgntahun.index
         readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
         readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
-        return readytgntahun.to_dict('records')
+        bulanbanjir = px.bar(readytgntahun,x='bulan kejadian',y='Jumlah Total Kejadian',color="bulan kejadian")
+        bulanbanjir.update_xaxes(type='category',tickmode='linear')
+        bulanbanjir.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
+        return bulanbanjir
 
     #create selection for the dataset
     #untuk histogram feed to the graph
     #jumlah banjir bulanan kalimantan barat
     #untuk menampilkan tabel
-    
     dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
     dfbnbp=dfbnbp.loc[(dfbnbp['Kabupaten']==filterlocation)]
     dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
@@ -335,8 +337,10 @@ def filter_countries(filterlocation):
     readytgntahun['bulan kejadian']=readytgntahun.index
     readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
     readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
-    return readytgntahun.to_dict('records')
-
+    bulanbanjir = px.bar(readytgntahun,x='bulan kejadian',y='Jumlah Total Kejadian',color="bulan kejadian")
+    bulanbanjir.update_xaxes(type='category',tickmode='linear')
+    bulanbanjir.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
+    return bulanbanjir
 
 
 
