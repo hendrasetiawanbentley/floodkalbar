@@ -43,6 +43,20 @@ readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=Fa
 bulanbanjir = px.bar(readytgntahun,x='bulan kejadian',y='Jumlah Total Kejadian',color="bulan kejadian")
 bulanbanjir.update_xaxes(type='category',tickmode='linear')
 
+precipitation = pd.read_csv('pontianak.csv')
+precipitation['date_time'] = pd.to_datetime(precipitation['date_time'], format="%Y-%m-%d")
+precipitation['month'] = pd.to_datetime(precipitation['date_time']).dt.strftime('%b')
+precipitationbulanan = precipitation.groupby(['month'])['precipMM'].mean()
+precipitationbulanan=pd.DataFrame(precipitationbulanan)
+precipitationbulanan['bulan']=precipitationbulanan.index
+precipitationbulanan=precipitationbulanan[['bulan','precipMM']]
+precipitationbulanan=precipitationbulanan.sort_values(by='precipMM', ascending=False)
+curfig  = px.bar(precipitationbulanan,x='bulan',y='precipMM',color="bulan")
+curfig.update_xaxes(type='category',tickmode='linear')
+curfig.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
+
+
+#https://gis.bnpb.go.id/
 app.layout = html.Div([
     html.H2('Hello World'),
     dcc.Dropdown(
