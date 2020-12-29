@@ -103,7 +103,7 @@ app.layout = html.Div([
                         style={'width': '70%', 'display': 'inline-block','background': '#f9f9f9','box-shadow': '0 0 1px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.1)','border-radius': '5px','margin-bottom': '20px','text-shadow': '1px 1px 1px rgba(0,0,0,.1)'}),
                       html.Div([
                           html.P("Tabel Bulanan Total Kejadian Periode 2017 - 2020"),
-                          dcc.Dropdown(options=[{'label': 'Seluruh Kalimantan Barat', 'value':''},
+                          dcc.Dropdown(options=[{'label': 'Seluruh Kalimantan Barat', 'value':'all'},
                                                 {'label': 'BENGKAYANG', 'value':'BENGKAYANG'},
                                                     {'label': 'KAPUAS HULU', 'value':'KAPUAS HULU'},
                                                     {'label': 'KAYONG UTARA', 'value':'KAYONG UTARA'},
@@ -139,7 +139,7 @@ app.layout = html.Div([
                     ],style={'width': '50%', 'display': 'inline-block'}),
                 html.Div([
                     html.H5("Data Bulanan Banjir Periode 2017 - 2020"),
-                    dcc.Dropdown(options=[{'label': 'Seluruh Kalimantan Barat', 'value':''},
+                    dcc.Dropdown(options=[{'label': 'Seluruh Kalimantan Barat', 'value':'all'},
                                                 {'label': 'BENGKAYANG', 'value':'BENGKAYANG'},
                                                     {'label': 'KAPUAS HULU', 'value':'KAPUAS HULU'},
                                                     {'label': 'KAYONG UTARA', 'value':'KAYONG UTARA'},
@@ -283,8 +283,8 @@ def update_hist(name,kabupaten):
     newfig.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
     return newfig 
 
-@app.callback(dash.dependencies.Output('graptotalperbandingan', 'figure'),
-              dash.dependencies.Input('3tahunanlokasigraph', 'value'))
+@app.callback(dash.dependencies.Output('memory-output', 'data'),
+              dash.dependencies.Input('3tahunanlokasi', 'value'))
 def filter_countries(filterlocation):
     if filterlocation=='all':
         # Return all the rows on initial load/no country selected.
@@ -309,15 +309,13 @@ def filter_countries(filterlocation):
         readytgntahun['bulan kejadian']=readytgntahun.index
         readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
         readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
-        bulanbanjir = px.bar(readytgntahun,x='bulan kejadian',y='Jumlah Total Kejadian',color="bulan kejadian")
-        bulanbanjir.update_xaxes(type='category',tickmode='linear')
-        bulanbanjir.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
-        return bulanbanjir
+        return readytgntahun.to_dict('records')
 
     #create selection for the dataset
     #untuk histogram feed to the graph
     #jumlah banjir bulanan kalimantan barat
     #untuk menampilkan tabel
+    
     dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
     dfbnbp=dfbnbp.loc[(dfbnbp['Kabupaten']==filterlocation)]
     dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
@@ -336,10 +334,14 @@ def filter_countries(filterlocation):
     readytgntahun['bulan kejadian']=readytgntahun.index
     readytgntahun=readytgntahun[['bulan kejadian','Jumlah Total Kejadian']]
     readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
-    bulanbanjir = px.bar(readytgntahun,x='bulan kejadian',y='Jumlah Total Kejadian',color="bulan kejadian")
-    bulanbanjir.update_xaxes(type='category',tickmode='linear')
-    bulanbanjir.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
-    return bulanbanjir
+    return readytgntahun.to_dict('records')
+
+@app.callback(dash.dependencies.Output('memory-table', 'data'),	   
+              dash.dependencies.Input('memory-output', 'data'))	    
+def on_data_set_table(data):	
+    if data is None:	
+        raise PreventUpdate	
+    return data
 
 if __name__ == '__main__':
     app.run_server(debug=True)
