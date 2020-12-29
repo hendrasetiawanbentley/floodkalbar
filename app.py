@@ -285,7 +285,7 @@ def update_hist(name,kabupaten):
     return newfig 
 
 @app.callback(dash.dependencies.Output('graptotalperbandingan', 'figure'),
-              dash.dependencies.Input('3tahunanlokasigraph', 'value'))
+              [dash.dependencies.Input('3tahunanlokasigraph', 'value')])
 def filter_lks(lks):
     dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
     dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
