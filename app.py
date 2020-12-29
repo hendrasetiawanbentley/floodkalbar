@@ -335,7 +335,11 @@ def filter_countries(filterlocation):
     readytgntahun=readytgntahun.sort_values(by='Jumlah Total Kejadian', ascending=False)
     return readytgntahun.to_dict('records')
 
-
+@app.callback(dash.dependencies.Output('memory-table', 'data'),
+              dash.dependencies.Input('memory-output', 'data'))
+def on_data_set_table(data):
+    if data is None:
+        raise PreventUpdate
 
 
 if __name__ == '__main__':
