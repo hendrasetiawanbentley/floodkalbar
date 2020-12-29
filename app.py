@@ -13,6 +13,17 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 server = app.server
 
+df.created_at = pd.to_datetime(df.created_at)
+df.created_at = df.created_at.dt.date
+banjir_count = df['created_at'].unique()
+freq=len(banjir_count)
+dfbnbp = pd.read_csv('Data Bencana_bnpb.csv')
+dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+dfbnbp['Tanggal Kejadian']= dfbnbp['Tanggal Kejadian'].dt.date
+banjir_count_BNPB = dfbnbp['Tanggal Kejadian'].unique()
+freqbnpb=len(banjir_count_BNPB)
+dfbnbp['Tanggal Kejadian'] = pd.to_datetime(dfbnbp['Tanggal Kejadian'], format="%Y-%m-%d")
+
 app.layout = html.Div([
     html.H2('Hello World'),
     dcc.Dropdown(
