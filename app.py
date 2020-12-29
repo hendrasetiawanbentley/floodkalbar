@@ -13,6 +13,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 server = app.server
 
+df = pd.read_csv('cleaneventdata.csv')
 df.created_at = pd.to_datetime(df.created_at)
 df.created_at = df.created_at.dt.date
 banjir_count = df['created_at'].unique()
