@@ -5,6 +5,7 @@ import dash_html_components as html
 import plotly.express as px
 import pandas as pd
 import dash_table
+from dash.exceptions import PreventUpdate
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
