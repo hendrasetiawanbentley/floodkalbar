@@ -154,6 +154,7 @@ app.layout = html.Div([
                                                     {'label': 'SEKADAU', 'value':'SEKADAU'},
                                                     {'label': 'SINTANG', 'value':'SINTANG'},],
                            id='3tahunanlokasigraph',
+                           multi=False,
                            value='all'),
                     dcc.Graph(id='graptotalperbandingan'),
                     html.P("Ketinggian permukaan pasang mempengaruhi event banjir", style={'textAlign': 'center'})
